@@ -14,33 +14,8 @@ from .tokenizer import CharTokenizer
 
 
 def load_split(data_dir: str, split: str):
-    """
-    Must return:
-      images: uint8 tensor, shape (N, 3, 64, 64)
-      words:  list[str], length N, e.g. ["largeredcircle", ...]
-
-    Common patterns to try, in order, once you've looked at generate_data.py:
-
-      1) A single cached tensor file (recommended - build this once):
-         data = torch.load(f"{data_dir}/{split}.pt")
-         return data["images"], data["words"]
-
-      2) Raw output from generate_data.py (folder of .png + labels.json):
-         from PIL import Image
-         import json, os
-         with open(f"{data_dir}/{split}/labels.json") as f:
-             labels = json.load(f)  # e.g. {"0000.png": "largeredcircle", ...}
-         names = sorted(labels.keys())
-         imgs = torch.stack([
-             torch.from_numpy(np.array(Image.open(f"{data_dir}/{split}/{n}")))
-             .permute(2, 0, 1) for n in names
-         ])
-         words = [labels[n] for n in names]
-         return imgs, words
-    """
-    raise NotImplementedError(
-        "Fill in load_split() to match what generate_data.py actually produces."
-    )
+    data = torch.load(f"{data_dir}/{split}.pt")
+    return data["images"], data["words"]
 
 
 def build_cache(data_dir: str, split: str, out_path: str):
