@@ -1,91 +1,61 @@
-<p align="center">
-  <img src="assets/tiny_vlm_logo_rounded.png" alt="Tiny VLM" width="200">
-</p>
+# rls-tiny-vlm — point de départ
 
-# RLS Entrance Challenge — Tiny Vision-Language Model
+Architecture (à ajuster si besoin, mais justifier dans le rapport) :
+- CNN 3 couches (32→64→128 canaux, stride 2) → 8×8 = **64 tokens visuels**
+- `d_model=128`, 4 têtes, 2 couches de décodeur, FFN=256
+- Masque préfixe : tokens visuels bidirectionnels entre eux, lettres causales, lettres voient toujours tout le visuel
+- ~1.2M paramètres
 
-RLS (Research Lab SUP'COM) is a student-led lab where members learn research by doing it: reading papers,
-building systems, running experiments, and reporting what they find — including what failed.
+## Étape 0 — à faire avant tout le reste
 
-This repository is the entrance challenge for new members. The task: build a tiny vision-language model that
-looks at a generated image and spells out a one-word description of it, letter by letter.
+`src/data.py` contient un `load_split()` **non implémenté**. Ouvrez le vrai
+`generate_data.py` fourni par RLS, regardez ce qu'il écrit sur disque
+(dossier d'images ? fichier `.npz` ? tensor `.pt` ?), puis remplissez
+`load_split()` en conséquence. Rien d'autre ne dépend de ce détail.
 
-<p align="center">
-  <img src="assets/Pipeline.png" alt="RLS input, through the Tiny VLM, to an rls output" width="640">
-</p>
-
-## What you're building
-
-```
-Image (B, 3, 64, 64)
-  -> CNN encoder                         (yours)
-  -> visual tokens                       (adapter: flatten + linear projection)
-  -> Transformer decoder                 (yours, handwritten multi-head attention)
-  -> greedy letter-by-letter decoding
-  -> e.g. "largeredcircle"
-```
-
-`generate_data.py` in this repository is provided by RLS — run it with the default (fixed) seed and do not
-change the split sizes. Everything else — tokenizer, CNN encoder, attention, decoder, training loop,
-evaluation, and experiments — is your own implementation.
-
-Full requirements, constraints, rubric, and timeline are in the Learning Guide and Project Brief you were
-given. If anything here conflicts with those documents, the documents win.
-
-## Getting started
+## Ordre d'exécution recommandé
 
 ```bash
-pip install -r requirements.txt
-python generate_data.py            # writes data/{train,val,test,test_heldout}.pt + data/meta.json
-pytest                             # generator tests pass out of the box; model tests skip until src/model/ is implemented
+# 1. Vérifier le tokenizer seul
+python -m src.tokenizer
+
+# 2. Vérifier l'encodeur CNN seul (juste les formes)
+python -m src.model.encoder
+
+# 3. Vérifier l'attention seule
+python -m src.model.attention
+
+# 4. Vérifier les formes de bout en bout
+python -m tests.test_shapes
+
+# 5. Test de correction obligatoire : attention vs SDPA
+python -m tests.test_attention
+
+# 6. E0 — overfitter un batch (bug check avant tout entraînement réel)
+python -m src.train --mode e0
+
+# 7. Entraînement complet
+python -m src.train --mode full --epochs 10
+
+# 8. Benchmark de vitesse (S1, obligatoire)
+python -m benchmarks.throughput
+
+# 9. Vérifier le parser d'évaluation seul
+python -m src.evaluate
 ```
 
-## Repository layout
+## Ce qui manque encore (à vous de le construire)
 
-```
-.
-├── generate_data.py         # RLS-provided ShapeScenes generator — do not modify
-├── configs/                 # baseline.yaml, blind.yaml, ...
-├── src/
-│   ├── tokenizer.py
-│   ├── data.py
-│   ├── model/
-│   │   ├── encoder.py
-│   │   ├── attention.py
-│   │   ├── decoder.py
-│   │   └── vlm.py
-│   ├── train.py
-│   ├── evaluate.py
-│   └── generate.py
-├── tests/
-│   ├── test_attention.py       # provided: equivalence with F.scaled_dot_product_attention, masks, gradients
-│   ├── test_shapes.py          # provided: tensor shapes and pipeline sanity checks
-│   └── test_generate_data.py   # provided: checks generate_data.py against the spec
-├── experiments/E1_blind/
-├── benchmarks/S1_throughput/
-└── report/
-```
+- Le chargement réel des données (`load_split`)
+- `generate.py` en script séparé si vous préférez (la logique existe déjà dans `TinyVLM.generate`)
+- `configs/baseline.yaml` et `configs/blind.yaml` (E1 : même modèle, images remplacées par des zéros)
+- `experiments/E1_blind/notes.md` et `benchmarks/S1_throughput/hardware.txt`
+- `AI_USAGE.md`
 
-## Provided tests
+## Résultats (à remplir)
 
-The model tests skip until you implement `src/model/`. They only assume a few conventions, documented at the top
-of `tests/test_attention.py` and `tests/test_shapes.py`: the last `nn.Module` in each `src/model/` file is its
-main class; attention is `Cls(d_model, n_heads)` called as `attention(x, mask)`, with a boolean mask where `True`
-means "may attend"; the encoder and the full model can be built with no arguments.
-
-## Results
-
-Fill in your results table here before submitting (see the Project Brief for the required format: experiment,
-configuration, metric, result as mean ± std over seeds, one-sentence interpretation).
-
-## AI usage
-
-Document any AI tool usage in `AI_USAGE.md` — required for submission.
-
-## Questions
-
-Ask in the challenge channel — conceptual and requirement questions only, not "please fix my code."
-
-## License
-
-See [LICENSE](LICENSE).
+| Experiment | Configuration | Metric | Result | Interpretation |
+|---|---|---|---|---|
+| Main model | configs/baseline.yaml | Exact match, test | … | … |
+| E1 blind | configs/blind.yaml | Attribute acc., test | … | … |
+| S1 throughput | batch 64 | images/s | … | … |
