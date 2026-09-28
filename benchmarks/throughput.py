@@ -21,8 +21,7 @@ def benchmark(model, device, batch_sizes=(1, 16, 64, 256), warmup_steps=5, timed
     for bs in batch_sizes:
         images = torch.randn(bs, 3, 64, 64, device=device)
         letters = torch.randint(0, 26, (bs, 20), device=device)   # fixed length for a clean timing
-        targets = torch.randint(0, 27, (bs, 20), device=device)
-
+        targets = torch.randint(0, 27, (bs, 21), device=device)   # L+1 pour matcher les nouveaux logits
         # warm-up: first iterations pay for kernel compilation / cuDNN
         # autotuning / memory allocator warm-up - don't include them in the timing
         for _ in range(warmup_steps):
