@@ -13,7 +13,7 @@ def test_forward_shapes():
     images = torch.randn(3, 3, 64, 64)
     letter_inputs = torch.randint(0, 26, (3, 10))   # pretend 10-letter prefix
     logits = model(images, letter_inputs)
-    assert logits.shape == (3, 10, 27), logits.shape
+    assert logits.shape == (3, 11, 27), logits.shape   # L+1 = 10+1
     print("forward pass shape OK:", logits.shape)
 
 

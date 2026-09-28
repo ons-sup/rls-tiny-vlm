@@ -46,32 +46,20 @@ class ShapeScenesDataset(Dataset):
 
 
 def collate_fn(batch, eos_id: int):
-    """
-    Batches variable-length words.
-
-    Teacher forcing setup:
-      full sequence per example = [c0, c1, ..., c_{L-1}, eos]   (length L+1)
-      input_letters  = full[:-1]   (length L)   fed into the decoder
-      targets        = full[1:]    (length L)   what each position should predict
-
-    Padding: pad input_letters with eos_id (never used meaningfully - the
-    corresponding target position is masked out of the loss anyway).
-    Targets are padded with -100, which nn.CrossEntropyLoss ignores by default.
-    """
     imgs, id_seqs = zip(*batch)
-    imgs = torch.stack(imgs, dim=0)                       # (B, 3, 64, 64)
+    imgs = torch.stack(imgs, dim=0)
 
-    inputs = [seq[:-1] for seq in id_seqs]                # word letters only
-    targets = [seq[1:] for seq in id_seqs]                # shifted by one
+    inputs = [seq[:-1] for seq in id_seqs]  
+    targets = [seq for seq in id_seqs]       
     lengths = [len(s) for s in inputs]
-    max_len = max(lengths)
+    max_in_len = max(lengths)
+    max_tgt_len = max_in_len + 1
     B = len(inputs)
 
-    input_pad = torch.full((B, max_len), eos_id, dtype=torch.long)
-    target_pad = torch.full((B, max_len), -100, dtype=torch.long)
+    input_pad = torch.full((B, max_in_len), eos_id, dtype=torch.long)
+    target_pad = torch.full((B, max_tgt_len), -100, dtype=torch.long)
     for i, (inp, tgt) in enumerate(zip(inputs, targets)):
-        L = len(inp)
-        input_pad[i, :L] = inp
-        target_pad[i, :L] = tgt
+        input_pad[i, :len(inp)] = inp
+        target_pad[i, :len(tgt)] = tgt
 
     return imgs, input_pad, target_pad, torch.tensor(lengths)

@@ -54,8 +54,8 @@ class TinyVLM(nn.Module):
         mask = build_prefix_mask(V, L).to(images.device)
 
         out = self.decoder(x, mask)                           # (B, V+L, d_model)
-        letter_out = out[:, V - 1: V - 1 + L, :]               # slice: last-visual .. second-to-last-letter
-        logits = self.head(letter_out)                         # (B, L, vocab_size)
+        letter_out = out[:, V - 1:, :]                          # last visual token jusqu'à la fin : L+1 positions
+        logits = self.head(letter_out)                          # (B, L+1, vocab_size)
         return logits
 
     @torch.no_grad()
