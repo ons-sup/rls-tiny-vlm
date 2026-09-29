@@ -24,4 +24,5 @@ desktop.ini
 .vscode/
 .idea/
 project
-pytest*
+pytest**.pt
+data/*.pt
